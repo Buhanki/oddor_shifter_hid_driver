@@ -1,126 +1,140 @@
 #include <linux/input-event-codes.h>
-#include <linux/input.h>
 #include <stdio.h>
-#include <linux/uinput.h>
-#include <sys/ioctl.h>
 #include <unistd.h>
-#include <libusb.h>
 #include <fcntl.h>
-#include <string.h>
+#include <libevdev-1.0/libevdev/libevdev.h>
+#include <libevdev-1.0/libevdev/libevdev-uinput.h>
+
+#include <linux/uinput.h>
+#include <hidapi.h>
+
+#include <wchar.h>
 
 #define VENDOR_ID  	0x4785
 #define PRODUCT_ID 	0x7353
 #define ENDPOINT_IN 0x81
-
-void emit(int fd, int type, int code, int val)
-{
-	struct input_event ie;
-
-  	ie.type = type;
-	ie.code = code;
-	ie.value = val;
-  	ie.time.tv_sec = 0;
-	ie.time.tv_usec = 0;
-
-	write(fd, &ie, sizeof(ie));
-}
+#define MAX_STR 255
 
 int main()
 {
-	int init = 0;
-	int claim = 0; 
-	int transferred = 0;
-	int resault = 0;
-
-	unsigned char description[68] = {0};
-	unsigned char stream[49] = {0};
-
-	libusb_context *ctx = NULL;
-	libusb_device_handle * usb_device_handle = NULL;
-
-	struct uinput_setup usetup;
-
-	int fd = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
-
-	ioctl(fd, UI_SET_EVBIT, EV_KEY);
-	ioctl(fd, UI_SET_KEYBIT, BTN_A);
-	ioctl(fd, UI_SET_KEYBIT, BTN_B);
-	ioctl(fd, UI_SET_KEYBIT, BTN_C);
-	ioctl(fd, UI_SET_KEYBIT, BTN_X);
-	ioctl(fd, UI_SET_KEYBIT, BTN_Y);
-	ioctl(fd, UI_SET_KEYBIT, BTN_TL);
-	ioctl(fd, UI_SET_KEYBIT, BTN_TR);
-	ioctl(fd, UI_SET_KEYBIT, BTN_SELECT);
-
-	memset(&usetup, 0, sizeof(usetup));
-	usetup.id.bustype = BUS_USB;
-	usetup.id.vendor = VENDOR_ID;
-	usetup.id.product = PRODUCT_ID;
-	strcpy(usetup.name, "ODDOR Shifter 7+R");
-
-	ioctl(fd, UI_DEV_SETUP, &usetup);
-	ioctl(fd, UI_DEV_CREATE);
-	ioctl(fd, UI_SET_PROPBIT, INPUT_PROP_ACCELEROMETER);
-
-	sleep(1);
-
-	init = libusb_init_context(&ctx, NULL, 0);
-	usb_device_handle = libusb_open_device_with_vid_pid(ctx, VENDOR_ID, PRODUCT_ID);
-	libusb_set_auto_detach_kernel_driver(usb_device_handle, 0);
-	libusb_set_option(ctx, LIBUSB_OPTION_LOG_LEVEL, LIBUSB_LOG_LEVEL_WARNING );
-	claim = libusb_claim_interface(usb_device_handle, 0 );
-  
-	while (true) {
-  		resault = libusb_interrupt_transfer(
-			usb_device_handle,
-			ENDPOINT_IN,
-			stream,
-			sizeof(stream), 
-			&transferred, 
-			1200);
-		//printf("%d\n", stream[0]);
-		switch (stream[0]) {
-		case 1:
-			emit(fd, EV_KEY, BTN_A, 1);		
-			emit(fd, EV_SYN, SYN_REPORT, 0);
-			break;
-		case 2:
-			emit(fd, EV_KEY, BTN_B, 1);
-			emit(fd, EV_SYN, SYN_REPORT, 0);
-			break;
-		case 4:
-			emit(fd, EV_KEY, BTN_C, 1);
-			emit(fd, EV_SYN, SYN_REPORT, 0);
-			break;
-		case 8:
-			emit(fd, EV_KEY, BTN_X, 1);
-			emit(fd, EV_SYN, SYN_REPORT, 0);
-			break;
-		case 16:
-			emit(fd, EV_KEY, BTN_Y, 1);
-			emit(fd, EV_SYN, SYN_REPORT, 0);
-			break;
-		case 32:
-			emit(fd, EV_KEY, BTN_TL, 1);
-			emit(fd, EV_SYN, SYN_REPORT, 0);
-			break;
-		case 64:
-			emit(fd, EV_KEY, BTN_TR, 1);
-			emit(fd, EV_SYN, SYN_REPORT, 0);
-			break;
-		case 128:
-			emit(fd, EV_KEY, BTN_SELECT, 1);
-			emit(fd, EV_SYN, SYN_REPORT, 0);
-			break;
+	while (1) {
+		int resault = 0;
+		int fd = 0;
+		int rc = 1;
+	
+		struct libevdev *dev = NULL;
+		struct libevdev_uinput *uinput_dev = NULL;
+		
+		wchar_t wstr[MAX_STR];
+	
+		unsigned char description[68] = {0};
+		unsigned char stream[49] = {0};
+		
+		hid_device *usb_device_handle;
+		resault = hid_init();
+		while (1) {
+			usb_device_handle = hid_open(VENDOR_ID, PRODUCT_ID, NULL);
+			if (usb_device_handle)
+				break;
+			sleep(2);
 		}
+	
+		resault = hid_get_manufacturer_string(usb_device_handle, wstr, MAX_STR);	
+		printf("%ls\n", wstr);
+	
+		resault = hid_get_product_string(usb_device_handle, wstr, MAX_STR);	
+		printf("%ls\n", wstr);
+		
+		resault = hid_get_serial_number_string(usb_device_handle, wstr, MAX_STR);	
+		printf("%d - %ls\n", wstr[0], wstr);
+	
+		resault = hid_get_indexed_string(usb_device_handle, 1, wstr, MAX_STR);	
+		printf("%ls\n", wstr);
+	
+		fd = open("/dev/input/event0", O_RDONLY|O_NONBLOCK);
+		rc = libevdev_new_from_fd(fd, &dev);
+	
+		libevdev_set_name(dev, "ODDOR Shifter 7+R");
+		libevdev_set_id_bustype(dev, BUS_USB);
+		libevdev_set_id_vendor(dev, VENDOR_ID);
+		libevdev_set_id_product(dev, PRODUCT_ID);
+	
+		libevdev_enable_event_type(dev, EV_KEY);
+		libevdev_enable_event_code(dev, EV_KEY, BTN_0, NULL);
+		libevdev_enable_event_code(dev, EV_KEY, BTN_1, NULL);
+		libevdev_enable_event_code(dev, EV_KEY, BTN_2, NULL);
+		libevdev_enable_event_code(dev, EV_KEY, BTN_3, NULL);
+		libevdev_enable_event_code(dev, EV_KEY, BTN_4, NULL);
+		libevdev_enable_event_code(dev, EV_KEY, BTN_5, NULL);
+		libevdev_enable_event_code(dev, EV_KEY, BTN_6, NULL);
+		libevdev_enable_event_code(dev, EV_KEY, BTN_7, NULL);
+	
+		libevdev_enable_event_type(dev, EV_ABS);
+		libevdev_enable_event_code(dev, EV_ABS, ABS_X, NULL);
+		libevdev_enable_event_code(dev, EV_ABS, ABS_Y, NULL);
+	
+		libevdev_uinput_create_from_device(dev, LIBEVDEV_UINPUT_OPEN_MANAGED, &uinput_dev);
+	
+		sleep(1);	
+	
+	  	while (1) {
+			resault = hid_read(usb_device_handle, stream, 49);
+			if (resault == -1) {
+				break;
+			}
+			switch (stream[0]) {
+			case 0 :
+				libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_0, 0);
+				libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_1, 0);
+				libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_2, 0);
+				libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_3, 0);
+				libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_4, 0);
+				libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_5, 0);
+				libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_6, 0);
+				libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_7, 0);
+	    			libevdev_uinput_write_event(uinput_dev, EV_SYN, SYN_REPORT, 0);
+				break;
+			case 1 :
+				libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_0, 1);
+				libevdev_uinput_write_event(uinput_dev, EV_SYN, SYN_REPORT, 0);
+				break;
+			case 2 :
+				libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_1, 1);
+				libevdev_uinput_write_event(uinput_dev, EV_SYN, SYN_REPORT, 0);
+				break;
+			case 4 :
+				libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_2, 1);
+				libevdev_uinput_write_event(uinput_dev, EV_SYN, SYN_REPORT, 0);
+				break;
+			case 8 :
+				libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_3, 1);
+				libevdev_uinput_write_event(uinput_dev, EV_SYN, SYN_REPORT, 0);
+				break;
+			case 16 :
+				libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_4, 1);
+				libevdev_uinput_write_event(uinput_dev, EV_SYN, SYN_REPORT, 0);
+				break;
+			case 32 :
+				libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_5, 1);
+				libevdev_uinput_write_event(uinput_dev, EV_SYN, SYN_REPORT, 0);
+				break;
+			case 64 :
+				libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_6, 1);
+				libevdev_uinput_write_event(uinput_dev, EV_SYN, SYN_REPORT, 0);
+				break;
+			case 128 :
+				libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_7, 1);
+				libevdev_uinput_write_event(uinput_dev, EV_SYN, SYN_REPORT, 0);
+				break;
+			}
+		}
+	
+		libevdev_uinput_destroy(uinput_dev);
+		libevdev_free(dev);
+	
+		hid_close(usb_device_handle);
+		resault = hid_exit();
+		sleep(5);
 	}
-
-	libusb_release_interface( usb_device_handle, 0);
-	libusb_close(usb_device_handle);
-	libusb_exit(ctx);
-
-	ioctl(fd, UI_DEV_DESTROY);
-	close(fd);
-
 	return 0;
 }

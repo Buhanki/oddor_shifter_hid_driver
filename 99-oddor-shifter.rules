@@ -1,0 +1,1 @@
+SUBSYSTEM=="input", ATTRS{name}=="ODDOR Shifter 7+R", ENV{ID_INPUT_JOYSTICK}="1"
