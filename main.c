@@ -35,6 +35,9 @@ int main()
 
 	usb_device_handle = hid_open(VENDOR_ID, PRODUCT_ID, NULL);
 
+	if (!usb_device_handle)
+		return -1;
+
 	resault = hid_get_manufacturer_string(usb_device_handle, wstr, MAX_STR);	
 	printf("%ls\n", wstr);
 
@@ -75,6 +78,9 @@ int main()
 
   	while (1) {
 		resault = hid_read(usb_device_handle, stream, 49);
+		if (resault == -1) {
+			break;
+		}
 		switch (stream[0]) {
 		case 0 :
 			libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_0, 0);
@@ -86,47 +92,38 @@ int main()
 			libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_6, 0);
 			libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_7, 0);
     			libevdev_uinput_write_event(uinput_dev, EV_SYN, SYN_REPORT, 0);
-			printf("%d\n", stream[0]);
 			break;
 		case 1 :
 			libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_0, 1);
 			libevdev_uinput_write_event(uinput_dev, EV_SYN, SYN_REPORT, 0);
-			printf("%d\n", stream[0]);
 			break;
 		case 2 :
 			libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_1, 1);
 			libevdev_uinput_write_event(uinput_dev, EV_SYN, SYN_REPORT, 0);
-			printf("%d\n", stream[0]);
 			break;
 		case 4 :
 			libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_2, 1);
 			libevdev_uinput_write_event(uinput_dev, EV_SYN, SYN_REPORT, 0);
-			printf("%d\n", stream[0]);
 			break;
 		case 8 :
 			libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_3, 1);
 			libevdev_uinput_write_event(uinput_dev, EV_SYN, SYN_REPORT, 0);
-			printf("%d\n", stream[0]);
 			break;
 		case 16 :
 			libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_4, 1);
 			libevdev_uinput_write_event(uinput_dev, EV_SYN, SYN_REPORT, 0);
-			printf("%d\n", stream[0]);
 			break;
 		case 32 :
 			libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_5, 1);
 			libevdev_uinput_write_event(uinput_dev, EV_SYN, SYN_REPORT, 0);
-			printf("%d\n", stream[0]);
 			break;
 		case 64 :
 			libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_6, 1);
 			libevdev_uinput_write_event(uinput_dev, EV_SYN, SYN_REPORT, 0);
-			printf("%d\n", stream[0]);
 			break;
 		case 128 :
 			libevdev_uinput_write_event(uinput_dev, EV_KEY, BTN_7, 1);
 			libevdev_uinput_write_event(uinput_dev, EV_SYN, SYN_REPORT, 0);
-			printf("%d\n", stream[0]);
 			break;
 		}
 	}
