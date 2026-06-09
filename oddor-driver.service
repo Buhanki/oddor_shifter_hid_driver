@@ -1,0 +1,13 @@
+[Unit]
+Description=Oddor Shifter driver daemon
+After=multi-user.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSEc=2
+ExecStart=/usr/bin/oddor_shifter_hid_driver
+WorkingDirectory=/usr/bin/
+
+[Install]
+WantedBy=default.target
