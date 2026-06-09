@@ -51,8 +51,9 @@ int main()
 		resault = hid_get_indexed_string(usb_device_handle, 1, wstr, MAX_STR);	
 		printf("%ls\n", wstr);
 	
-		fd = open("/dev/input/event0", O_RDONLY|O_NONBLOCK);
-		rc = libevdev_new_from_fd(fd, &dev);
+		//fd = open("/dev/input/event0", O_RDONLY|O_NONBLOCK);
+		//rc = libevdev_new_from_fd(fd, &dev);
+		dev = libevdev_new();
 	
 		libevdev_set_name(dev, "ODDOR Shifter 7+R");
 		libevdev_set_id_bustype(dev, BUS_USB);
@@ -68,7 +69,7 @@ int main()
 		libevdev_enable_event_code(dev, EV_KEY, BTN_5, NULL);
 		libevdev_enable_event_code(dev, EV_KEY, BTN_6, NULL);
 		libevdev_enable_event_code(dev, EV_KEY, BTN_7, NULL);
-	
+
 		libevdev_enable_event_type(dev, EV_ABS);
 		libevdev_enable_event_code(dev, EV_ABS, ABS_X, NULL);
 		libevdev_enable_event_code(dev, EV_ABS, ABS_Y, NULL);

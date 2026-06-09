@@ -18,8 +18,6 @@ make
 We also need to add udev and hwdb rules.
 ```
 # cp 99-oddor-shifter.rules /etc/udev/rules.d/
-# cp 99-uinput.rules /etc/udev/rules.d/
-# cp 99-oddor-shifter.hwdb /etc/udev/hwdb.d/
 ```
 Reload udev.
 ```
@@ -35,6 +33,10 @@ Reload systemd units.
 ```
 And start it.
 ```
-sudo systemctl enable --now oddor-driver.service
+# systemctl enable --now oddor-driver.service
+```
+Add user in input gproup
+```
+# usermod -aG uinput $USER
 ```
 This is my first driver, it will improve over time.
